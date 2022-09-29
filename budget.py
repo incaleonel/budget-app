@@ -22,9 +22,10 @@ class Category:
 #If there are not enough funds, nothing should be added to the ledger. 
 #This method should return True if the withdrawal took place, and False otherwise.
     def withdraw(self, amount, description=''):
-        if amount: 
-            self.ledger.append({'amount': float(amount*-1), 'description':description})
-        return True if amount else False
+        if self.get_balance() - amount >= 0: 
+            self.ledger.append({'amount': -1*amount, 'description':description})
+            return True
+        return False
 #'get_balance' method that returns the current balance of the budget category based on the deposits and withdrawals that have occurred.
     def get_balance(self):
         total = 0
@@ -37,8 +38,7 @@ class Category:
 #The method should then add a deposit to the other budget category with the amount and the description "Transfer from [Source Budget Category]".
 #If there are not enough funds, nothing should be added to either ledgers. This method should return True if the transfer took place, and False otherwise.
     def transfer(self, amount, budget):
-        if amount:
-            self.withdraw(amount, 'Transfer to '+ budget.category)
+        if self.withdraw(amount, 'Transfer to '+ budget.category):
             budget.deposit(amount, 'Transfer from '+ self.category)
             return True
         return False
@@ -46,6 +46,44 @@ class Category:
 #It returns False if the amount is greater than the balance of the budget category and returns True otherwise. 
 #This method should be used by both the withdraw method and transfer method.    
     def check_funds(self, amount):
-        return True if amount < self.get_balance() else False
+        return False if amount > self.get_balance() else True
         
 def create_spend_chart(categories):
+    
+    title = 'Percentage spent by category\n'
+    withdrawals_total = 0
+    spend_category = []
+    max_length = 0
+    for category in categories:
+        spend = 0
+        max_length = len(category.category) if max_length < len(category.category) else max_length
+        for item in category.ledger:
+            if item.get('amount') < 0:
+                spend += item.get('amount')
+        spend_category.append(spend)
+        withdrawals_total += spend
+    
+    chart1 = ''
+    line = '-'
+    for i in reversed(range(0,101,10)):
+        
+        chart1 += '' if i else ' '
+        chart1 += str(i) + '| ' if i==100 else ' ' + str(i) + '| '
+        
+        for percent in spend_category:
+            percent = int(percent*100/withdrawals_total)
+            if percent >= i:
+                chart1 += 'o  '
+            else:
+                chart1 += '   '
+            if i==100:
+                line +='---'
+        chart1 +='\n'       
+    line = line.rjust(len(line)+4)
+    chart2 = ''
+    for i in range(max_length):
+        chart2 += '     '
+        for category in categories:
+            chart2 += category.category[i] + '  ' if len(category.category) > i else '   '
+        chart2 +='\n' if i != max_length-1 else ''
+    return title + chart1 + line + '\n' + chart2 
